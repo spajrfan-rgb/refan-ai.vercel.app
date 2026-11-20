@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>REFAN AI - Asisten AI Cerdas</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Marked.js untuk merender format Markdown dari respons AI -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        refan: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Sembunyikan scrollbar horizontal pada bar menu */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Kustomisasi Scrollbar yang rapi */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.3);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.5);
+        }
+
+        /* Styling Markdown di dalam Gelembung Chat */
+        .prose-chat p { margin-bottom: 0.65rem; line-height: 1.6; }
+        .prose-chat p:last-child { margin-bottom: 0; }
+        .prose-chat ul, .prose-chat ol { margin-left: 1.25rem; margin-bottom: 0.65rem; list-style-type: disc; }
+        .prose-chat ol { list-style-type: decimal; }
+        .prose-chat li { margin-bottom: 0.25rem; }
+        .prose-chat strong { font-weight: 700; color: inherit; }
+        .prose-chat pre {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            padding: 0.85rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            margin: 0.75rem 0;
+            font-size: 0.85rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .prose-chat code {
+            font-family: monospace;
+            background-color: rgba(99, 102, 241, 0.15);
+            padding: 0.15rem 0.35rem;
+            border-radius: 0.375rem;
+            font-size: 0.875em;
+        }
+        .prose-chat pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        .prose-chat a {
+            color: #6366f1;
+            text-decoration: underline;
+        }
+
+        /* Animasi titik mengetik */
+        @keyframes bounce-dot {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        .typing-dot {
+            animation: bounce-dot 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 h-[100dvh] flex flex-col overflow-hidden select-none sm:select-auto transition-colors duration-200">
+
+    <!-- Notifikasi Toast Custom (Pengganti alert) -->
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] max-w-sm"></div>
+
+    <!-- Header Aplikasi (Tampilan Mobile & Desktop App Bar) -->
+    <header class="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 sm:px-4 py-2.5 flex items-center justify-between z-20 gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <!-- Logo REFAN AI -->
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 text-white flex-none">
+                <i data-lucide="sparkles" class="w-5 h-5"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                    <h1 class="font-display font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 bg-clip-text text-transparent truncate">
+                        REFAN AI
+                    </h1>
+                    <!-- Pemilih Model: REFAN Flash (Cepat) vs REFAN Pro (Penalaran Mendalam) -->
+                    <div class="relative inline-block">
+                        <button onclick="toggleModelDropdown()" id="model-selector-btn" class="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/25 transition">
+                            <i id="model-badge-icon" data-lucide="zap" class="w-3 h-3 text-amber-500"></i>
+                            <span id="model-badge-text">REFAN Flash</span>
+                            <i data-lucide="chevron-down" class="w-3 h-3 opacity-70"></i>
+                        </button>
+                        
+                        <!-- Dropdown Menu Pilihan Model -->
+                        <div id="model-dropdown" class="hidden absolute left-0 mt-2 w-64 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-1.5 z-50">
+                            <button onclick="selectModel('flash')" class="w-full text-left p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-start gap-2.5">
+                                <div class="p-1.5 rounded-lg bg-amber-500/15 text-amber-500 mt-0.5">
+                                    <i data-lucide="zap" class="w-4 h-4"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-bold text-slate-800 dark:text-slate-100">REFAN Flash</span>
+                                        <span id="check-flash" class="text-[10px] font-bold text-indigo-500">AKTIF</span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Jawaban kilat & super responsif untuk tugas harian.</p>
+                                </div>
+                            </button>
+
+                            <button onclick="selectModel('pro')" class="w-full text-left p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-start gap-2.5 mt-1">
+                                <div class="p-1.5 rounded-lg bg-purple-500/15 text-purple-500 mt-0.5">
+                                    <i data-lucide="crown" class="w-4 h-4"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
+                                            REFAN Pro
+                                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-gradient-to-r from-indigo-500 to-purple-500 text-white">PRO</span>
+                                        </span>
+                                        <span id="check-pro" class="hidden text-[10px] font-bold text-indigo-500">AKTIF</span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Penalaran mendalam, coding kompleks & analisis detail.</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="header-status-text">Mode Cepat • Online</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Tombol Aksi Header -->
+        <div class="flex items-center gap-1 sm:gap-1.5 flex-none">
+            <!-- Tombol Buka/Tutup Canvas -->
+            <button onclick="toggleCanvas()" id="header-canvas-btn" title="Buka Ruang Kerja Canvas" class="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-500/10 hover:text-indigo-500 border border-slate-200 dark:border-slate-700 active:scale-95 transition">
+                <i data-lucide="panel-right" class="w-4 h-4 text-indigo-500"></i>
+                <span class="hidden sm:inline">Canvas</span>
+            </button>
+            <!-- Tombol Chat Baru -->
+            <button onclick="resetChat()" title="Percakapan Baru" class="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition">
+                <i data-lucide="square-pen" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </button>
+            <!-- Tombol Ganti Tema -->
+            <button onclick="toggleTheme()" title="Ubah Tema" class="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition">
+                <i id="theme-icon" data-lucide="sun" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </button>
+            <!-- Tombol Info / Panduan APK -->
+            <button onclick="toggleInfoModal()" title="Info & Unduh APK" class="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/25 active:scale-95 transition">
+                <i data-lucide="smartphone" class="w-4 h-4"></i>
+                <span class="hidden md:inline">Buat APK</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Selector Mode AI (Chat Pintar / Canvas / Riset Web / Buat Gambar / Ringkas Kilat) -->
+    <div class="flex-none bg-slate-100/70 dark:bg-slate-900/50 border-b border-slate-200/80 dark:border-slate-800/80 px-3 sm:px-4 py-2">
+        <div class="max-w-5xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <button onclick="setMode('chat')" id="mode-chat" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-indigo-600 text-white shadow-sm">
+                <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                Chat Pintar
+            </button>
+            <button onclick="setMode('canvas')" id="mode-canvas" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                <i data-lucide="layout-template" class="w-3.5 h-3.5 text-purple-500"></i>
+                Canvas Kode & Teks
+            </button>
+            <button onclick="setMode('search')" id="mode-search" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                <i data-lucide="globe" class="w-3.5 h-3.5 text-cyan-500"></i>
+                Info Terkini (Web)
+            </button>
+            <button onclick="setMode('image')" id="mode-image" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                <i data-lucide="image" class="w-3.5 h-3.5 text-pink-500"></i>
+                Buat Gambar AI
+            </button>
+            <button onclick="setMode('fast')" id="mode-fast" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
+                Jawaban Kilat
+            </button>
+        </div>
+    </div>
+
+    <!-- Kontainer Split View: Chat di Kiri + Canvas di Kanan -->
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- KOLOM KIRI: Area Percakapan & Input -->
+        <div id="chat-pane" class="flex-1 flex flex-col min-w-0 h-full transition-all duration-300">
+            <!-- Area Percakapan Utama -->
+            <main id="chat-container" class="flex-1 overflow-y-auto px-4 py-5 space-y-5 scroll-smooth">
+                <div class="max-w-3xl mx-auto space-y-6" id="messages-wrapper">
+                    
+                    <!-- Layar Selamat Datang (Welcome Screen) -->
+                    <div id="welcome-screen" class="py-4 sm:py-8 text-center space-y-6">
+                        <div class="inline-flex p-4 rounded-3xl bg-gradient-to-tr from-indigo-500/20 via-purple-500/20 to-cyan-500/20 border border-indigo-500/30 shadow-inner">
+                            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center text-white shadow-xl shadow-indigo-600/30">
+                                <i data-lucide="bot" class="w-8 h-8 sm:w-9 sm:h-9"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2 max-w-md mx-auto">
+                            <h2 class="font-display text-2xl sm:text-3xl font-extrabold tracking-tight">
+                                Halo! Saya <span class="text-indigo-500">REFAN AI</span>
+                            </h2>
+                            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Pilih <strong>REFAN Flash</strong> untuk jawaban kilat, <strong>REFAN Pro</strong> untuk analisis mendalam, atau buka <strong>Canvas</strong> untuk membuat aplikasi & dokumen langsung!
+                            </p>
+                        </div>
+
+                        <!-- Kartu Saran Cepat (Quick Prompts) -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-xl mx-auto text-left pt-1">
+                            <button onclick="useSuggestion('Buatkan aplikasi kalkulator modern lengkap dengan HTML, Tailwind CSS, dan JavaScript yang interaktif', 'canvas', 'pro')" class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-purple-500 dark:hover:border-purple-500 transition flex items-start gap-3 group shadow-sm">
+                                <div class="p-2 rounded-xl bg-purple-500/10 text-purple-500 group-hover:scale-110 transition">
+                                    <i data-lucide="layout-template" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                        Buat Web di Canvas
+                                        <span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-500">BARU</span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Kalkulator modern + Live Preview</div>
+                                </div>
+                            </button>
+
+                            <button onclick="useSuggestion('Analisis strategi bisnis digital terbaik untuk pemula di tahun 2026 secara mendalam', 'chat', 'pro')" class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500 transition flex items-start gap-3 group shadow-sm">
+                                <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-500 group-hover:scale-110 transition">
+                                    <i data-lucide="crown" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-200">Riset Mendalam (REFAN Pro)</div>
+                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Strategi bisnis digital 2026</div>
+                                </div>
+                            </button>
+
+                            <button onclick="useSuggestion('Jelaskan cara kerja black hole dalam 3 poin singkat yang mudah dipahami', 'fast', 'flash')" class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500 dark:hover:border-amber-500 transition flex items-start gap-3 group shadow-sm">
+                                <div class="p-2 rounded-xl bg-amber-500/10 text-amber-500 group-hover:scale-110 transition">
+                                    <i data-lucide="zap" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-200">Jawaban Kilat (Flash)</div>
+                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Penjelasan singkat & padat</div>
+                                </div>
+                            </button>
+
+                            <button onclick="useSuggestion('Kucing astronot futuristik dengan jaket neon di bulan, gaya sinematik 3D', 'image', 'flash')" class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-pink-500 dark:hover:border-pink-500 transition flex items-start gap-3 group shadow-sm">
+                                <div class="p-2 rounded-xl bg-pink-500/10 text-pink-500 group-hover:scale-110 transition">
+                                    <i data-lucide="palette" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-200">Lukis Gambar AI</div>
+                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Kucing astronot neon di bulan</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+
+            <!-- Area Input Pesan di Bagian Bawah -->
+            <footer class="flex-none bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-3 sm:p-4">
+                <div clas
+                  const apiKey = ""; // AQ.Ab8RN6Io1KGfvXuNiqKZ49N7dNYR37Udo_qW0HIbmIYC-enlvQ
